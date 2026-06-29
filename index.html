@@ -475,7 +475,7 @@ function initClient(url,key){
 /* ---------------- auth ---------------- */
 async function login(){
   $('lg-err').textContent='';
-  initAudio();                 // débloque le son (geste utilisateur)
+  ensureAudio();               // débloque le son (geste utilisateur)
   requestNotif();              // demande la permission de notifier
   const email=$('lg-email').value.trim(), password=$('lg-pass').value;
   const {error}=await sb.auth.signInWithPassword({email,password});
@@ -1268,26 +1268,43 @@ async function delTable(id,num){
 }
 
 /* ---------------- alertes "prêt" (serveur) ---------------- */
-function initAudio(){
-  try{ audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){}
+function ensureAudio(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+  }catch(e){}
+}
+// débloque l'audio dès la 1re interaction (mobile : AudioContext suspendu sinon)
+// + le réveille au retour en avant-plan
+function armAudioUnlock(){
+  const unlock=()=>{
+    ensureAudio();
+    try{ const b=audioCtx.createBuffer(1,1,22050), s=audioCtx.createBufferSource();
+      s.buffer=b; s.connect(audioCtx.destination); s.start(0); }catch(e){}  // iOS : débloque vraiment
+  };
+  ['pointerdown','touchstart','mousedown','keydown'].forEach(ev=>
+    document.addEventListener(ev, unlock, {passive:true}));
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) ensureAudio(); });
 }
 function requestNotif(){
   try{ if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }catch(e){}
 }
 function beep(){
   const now=Date.now(); if(now-lastBeep<1200) return; lastBeep=now;   // anti-spam
+  try{ if(navigator.vibrate) navigator.vibrate([90,60,90]); }catch(e){}  // fallback haptique (Android)
+  ensureAudio();
   if(!audioCtx) return;
   try{
-    // deux notes courtes facon "ding-dong"
-    [880,1175].forEach((f,i)=>{
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    // clochette : deux "ding" cristallins, volume et traîne plus marqués
+    [1318,1760].forEach((f,i)=>{
       const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-      o.type='sine'; o.frequency.value=f;
-      const t=audioCtx.currentTime+i*0.18;
+      o.type='triangle'; o.frequency.value=f;
+      const t=audioCtx.currentTime+i*0.22;
       g.gain.setValueAtTime(0.0001,t);
-      g.gain.exponentialRampToValueAtTime(0.4,t+0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
-      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.18);
+      g.gain.exponentialRampToValueAtTime(0.6,t+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.42);
     });
   }catch(e){}
 }
@@ -1328,6 +1345,7 @@ function ago(ts){const s=Math.floor((Date.now()-new Date(ts))/1000);
   if(s<60)return s+'s'; const m=Math.floor(s/60); return m+'min';}
 
 /* go */
+armAudioUnlock();   // débloque le son à la 1re interaction (couvre la reconnexion auto)
 bootConfig();
 setInterval(()=>{ if(view==='bar'||view==='cuisine'){const b=$('board');
   if(b&&b.classList.contains('board')) refreshKDS(view);} },30000); // rafraîchit les compteurs
