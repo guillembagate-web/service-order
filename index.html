@@ -139,13 +139,15 @@
     letter-spacing:.05em;color:var(--txt-dim);margin:0 0 6px}
   .bz-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:7px}
 
-  .tile{display:flex;flex-direction:column;gap:4px;padding:8px 9px;border-radius:11px;
-    background:var(--board-2);border:1px solid var(--line);color:var(--txt);text-align:left;min-height:54px}
-  .t-top{display:flex;align-items:center;justify-content:space-between}
-  .t-num{font-family:var(--mono);font-weight:700;font-size:16px}
-  .t-couv{font-family:var(--mono);font-size:11px;color:var(--txt-dim);font-weight:600}
+  .bz-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px}
+
+  .tile{display:flex;flex-direction:column;gap:2px;padding:6px 6px;border-radius:10px;
+    background:var(--board-2);border:1px solid var(--line);color:var(--txt);text-align:left;min-height:44px}
+  .t-top{display:flex;align-items:center;justify-content:space-between;gap:4px}
+  .t-num{font-family:var(--mono);font-weight:700;font-size:15px}
+  .t-couv{font-family:var(--mono);font-size:10px;color:var(--txt-dim);font-weight:600}
   .t-prog{display:flex;flex-wrap:wrap;gap:3px}
-  .tp{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 5px;border-radius:5px;line-height:1.5}
+  .tp{font-family:var(--mono);font-size:10px;font-weight:700;padding:0 5px;border-radius:5px;line-height:1.6;min-width:16px;text-align:center}
   .tp-suite{background:rgba(224,161,48,.2);color:var(--att)}
   .tp-cook{background:rgba(62,123,250,.2);color:#7aa5ff}
   .tp-pret{background:rgba(224,83,61,.22);color:#f08c7a}
@@ -194,7 +196,14 @@
     .ticket.open{padding-top:0}
     .carte-col{padding-bottom:84px}      /* la carte ne passe pas sous la barre */
     .ticket-body .send{display:none}     /* on garde le bouton Envoyer de la barre */
-    .board-body{max-height:38vh}
+    .board-body{max-height:34vh}
+    .bz-tiles{grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:4px}
+    .tile{padding:4px 3px;min-height:38px;border-radius:8px;gap:1px}
+    .t-num{font-size:13px}
+    .t-couv{font-size:9px}
+    .tp{font-size:9px;padding:0 3px;min-width:13px;line-height:1.5}
+    .bz-h{margin-bottom:4px}
+    .bz{margin-bottom:8px}
   }
   .ticket h3{font-family:var(--disp);margin:0 0 12px;font-size:16px;display:flex;justify-content:space-between}
   .tline{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -521,6 +530,7 @@ async function loadCarteTables(){
 /* ---------------- ÉCRAN SERVEUR ---------------- */
 async function renderServeur(){
   panier=[]; tableSel=null; openCmd=null; sentLines=[]; couverts=null; modeSuivre=false;
+  boardOpen=true;   // plan de salle toujours ouvert en arrivant sur l'écran
   // carte en sections dépliables, ordonnées
   const ORDER=['Entrées','Plats','Pizzas','Menus','Bières','Cocktails','Vins','Softs','Cafés','Desserts'];
   const rank=c=> c==='Desserts'?9999 : (ORDER.indexOf(c)>=0?ORDER.indexOf(c):500);
@@ -533,7 +543,7 @@ async function renderServeur(){
       return `<button class="prod ${out?'out':''}" onclick="addItem('${p.id}')">
         <span>${esc(p.nom)}</span><span class="poste-dot dot-${p.poste}"></span></button>`;
     }).join('');
-    prods+=`<details class="cat-sec"${ci===0?' open':''}>
+    prods+=`<details class="cat-sec">
       <summary class="cat-sum">${esc(c)}<span class="cat-count">${items.length}</span></summary>
       <div class="prods">${btns}</div></details>`;
   });
@@ -596,9 +606,9 @@ function tileHtml(t){
   let prog='';
   if(s){
     const c=s.counts, chips=[];
-    if(c.a_suivre) chips.push(`<span class="tp tp-suite">⏸${c.a_suivre}</span>`);
+    if(c.a_suivre) chips.push(`<span class="tp tp-suite">${c.a_suivre}</span>`);
     if(c.en_attente+c.en_prepa) chips.push(`<span class="tp tp-cook">${c.en_attente+c.en_prepa}</span>`);
-    if(c.pret) chips.push(`<span class="tp tp-pret">${c.pret} prêt</span>`);
+    if(c.pret) chips.push(`<span class="tp tp-pret">${c.pret}</span>`);
     if(c.servi) chips.push(`<span class="tp tp-servi">✓${c.servi}</span>`);
     prog=`<div class="t-prog">${chips.join('')}</div>`;
   }
