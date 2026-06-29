@@ -432,8 +432,7 @@ let occupied=new Set(); // ids des tables avec une note ouverte
 let alertChannel=null; // canal realtime des alertes "prêt" (serveur)
 let audioCtx=null;     // contexte audio pour le bip
 let lastBeep=0;        // anti-spam du bip
-let forceMode=null;    // override d'ajout : null=Auto(par catégorie), false=De suite, true=À suivre
-const SUIVRE_CATS=new Set(['Plats','Pizzas','Desserts']); // catégories "à suivre" par défaut (Menus = éclatés par service à l'envoi)
+let forceMode=false;   // ajout courant : false=de suite (défaut, à la carte), true=à suivre (maintien manuel)
 let couverts=null;     // nombre de couverts de la table sélectionnée
 let tableStates={};    // table_id -> {couverts, counts, state} (plan de salle live)
 let boardOpen=true;    // plan de salle déplié ?
@@ -540,7 +539,7 @@ async function loadCarteTables(){
 
 /* ---------------- ÉCRAN SERVEUR ---------------- */
 async function renderServeur(){
-  panier=[]; tableSel=null; openCmd=null; sentLines=[]; couverts=null; forceMode=null;
+  panier=[]; tableSel=null; openCmd=null; sentLines=[]; couverts=null; forceMode=false;
   boardOpen=true;   // plan de salle toujours ouvert en arrivant sur l'écran
   // carte en sections dépliables, ordonnées
   const ORDER=['Entrées','Plats','Pizzas','Menus','Bières','Cocktails','Vins','Softs','Cafés','Desserts'];
@@ -673,7 +672,7 @@ async function pickTable(id,num){
   else askCouverts(id,num);                        // table libre → demander les couverts
 }
 async function openTable(id,num){
-  tableSel={id,num}; forceMode=null; panier=[];
+  tableSel={id,num}; forceMode=false; panier=[];
   await loadOpenNote(id);
   if(openCmd) couverts=openCmd.couverts||null;
   updateTkHeader(num);
@@ -739,8 +738,8 @@ function addItem(pid){
   pushPanier(p,[]);                                                 // ajout direct
 }
 function pushPanier(p,opts){
-  // statut "à suivre" : override manuel si défini, sinon défaut par catégorie
-  const asuiv = (forceMode===null) ? SUIVRE_CATS.has(p.categorie) : forceMode;
+  // statut "à suivre" : maintien manuel uniquement (à la carte part de suite ; menus = éclatés à l'envoi)
+  const asuiv = forceMode;
   // une ligne distincte par combinaison d'options ET par mode (de suite / à suivre)
   const sig=JSON.stringify(opts);
   const ex=panier.find(x=>x.id===p.id && JSON.stringify(x.options)===sig && x.asuivre===asuiv);
@@ -748,10 +747,7 @@ function pushPanier(p,opts){
   else panier.push({id:p.id,nom:p.nom,prix:p.prix,poste:p.poste,categorie:p.categorie,qty:1,note:'',options:opts,asuivre:asuiv});
   drawTicket();
 }
-function toggleMode(){ // Auto → De suite → À suivre → Auto
-  forceMode = forceMode===null ? false : forceMode===false ? true : null;
-  drawTicket();
-}
+function toggleMode(){ forceMode=!forceMode; drawTicket(); }
 
 /* ----- modal de choix des options ----- */
 function openOptions(p,groupes){
@@ -854,7 +850,7 @@ function drawTicket(){
   // zone "à ajouter" (panier en cours)
   const box=$('tk-lines');
   if(!panier.length){
-    forceMode=null;
+    forceMode=false;
     box.innerHTML=`<div class="resto-name" style="padding:10px 0">${tableSel?'Touche un plat pour l’ajouter.':'Choisis une table.'}</div>`;
   } else {
     const ligneHtml=(l,i)=>{
@@ -871,11 +867,10 @@ function drawTicket(){
     if(suite.length){
       h+=`<div class="suite-sep">À suivre</div>`+suite.map(x=>ligneHtml(x.l,x.i)).join('');
     }
-    // bouton bascule de mode (Auto = défaut par catégorie)
-    const modeLbl = forceMode===null ? 'Auto · entrées de suite, plats à suivre'
-                  : forceMode===false ? '● Forcé : tout « De suite »'
-                  : '● Forcé : tout « À suivre »';
-    h+=`<button class="mode-btn ${forceMode!==null?'on':''}" onclick="toggleMode()">${modeLbl} ⟳</button>`;
+    // bouton bascule : par défaut tout part de suite ; le serveur peut retenir manuellement
+    const modeLbl = forceMode ? '● Ajout en « À suivre » — repasser en direct'
+                              : 'Retenir les suivants en « À suivre » ↓';
+    h+=`<button class="mode-btn ${forceMode?'on':''}" onclick="toggleMode()">${modeLbl}</button>`;
     box.innerHTML=h;
   }
   const dis = !(panier.length && tableSel);
@@ -946,7 +941,7 @@ async function envoyer(){
   });
   if(optRows.length) await sb.from('lignes_options').insert(optRows);
   toast('Envoyé — Table '+tableSel.num);
-  panier=[]; forceMode=null;
+  panier=[]; forceMode=false;
   setTicketOpen(false);
   await loadOpenNote(tableSel.id);   // recharge la note (affiche ce qui vient d'être envoyé)
   await loadTableStates(); renderBoard();   // met à jour le plan de salle
