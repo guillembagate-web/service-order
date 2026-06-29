@@ -974,7 +974,7 @@ async function renderKDS(poste){
 async function refreshKDS(poste){
   const {data}=await sb.from('lignes_commande')
     .select('*,commandes(couverts,table_id,tables_salle(numero)),lignes_options(groupe_nom,option_libelle)')
-    .eq('poste',poste).in('statut',['a_suivre','en_attente','en_prepa','pret'])
+    .eq('poste',poste).in('statut',['a_suivre','en_attente','en_prepa'])
     .order('created_at');
   if(!$('board') && !$('hold'))return;
   const rows=data||[];
@@ -1055,9 +1055,8 @@ async function refreshKDS(poste){
   }
 }
 function advBtn(st,ids){
-  if(st==='en_attente') return `<button class="adv go-prepa" onclick="adv('${ids}','en_prepa')">Commencer</button>`;
-  if(st==='en_prepa')   return `<button class="adv go-pret"  onclick="adv('${ids}','pret')">Marquer prêt</button>`;
-  return `<button class="adv go-servi" onclick="adv('${ids}','servi')">Servi</button>`;
+  // cuisine : un seul geste — le bon est sorti → prêt (quitte le pass, serveur notifié)
+  return `<button class="adv go-pret" onclick="adv('${ids}','pret')">Bon sorti</button>`;
 }
 async function adv(ids,statut){
   await sb.from('lignes_commande').update({statut}).in('id',ids.split(','));
