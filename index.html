@@ -1008,7 +1008,12 @@ async function renderKDS(poste){
   await refreshKDS(poste);
   channel=sb.channel('kds-'+poste)
     .on('postgres_changes',{event:'*',schema:'public',table:'lignes_commande',
-        filter:'poste=eq.'+poste},()=>refreshKDS(poste))
+        filter:'poste=eq.'+poste},(payload)=>{
+        const n=payload.new||{}, o=payload.old||{};
+        // sonne quand une ligne entre en "à faire" (nouvel envoi ou suite lancée)
+        if(n.statut==='en_attente' && o.statut!=='en_attente') beep();
+        refreshKDS(poste);
+      })
     .subscribe();
 }
 async function refreshKDS(poste){
