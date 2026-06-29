@@ -927,8 +927,8 @@ async function envoyer(){
       if(courses.length){
         courses.forEach((c,idx)=>specs.push({line:{...base,
           nom_produit:`${c.dish} · ${l.nom}`,
-          prix_unitaire: idx===0 ? l.prix : 0,         // prix du menu porté par la 1ʳᵉ ligne
-          statut: idx===0 ? 'en_attente' : 'a_suivre'  // 1er service de suite, reste à suivre
+          prix_unitaire: idx===0 ? l.prix : 0,             // prix du menu porté par la 1ʳᵉ ligne (ordre de service)
+          statut: c.key==='entree' ? 'en_attente' : 'a_suivre'  // entrée de suite, plat & dessert à suivre
         }, opts:[]}));
         return;
       }
