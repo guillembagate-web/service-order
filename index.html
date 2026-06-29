@@ -1006,10 +1006,11 @@ async function renderKDS(poste){
     <aside class="kds-recap" id="recap"></aside>
   </div>`;
   await refreshKDS(poste);
-  channel=sb.channel('kds-'+poste)
+  channel=sb.channel('kds-'+me.restaurant_id+'-'+poste)
     .on('postgres_changes',{event:'*',schema:'public',table:'lignes_commande',
-        filter:'poste=eq.'+poste},(payload)=>{
+        filter:'restaurant_id=eq.'+me.restaurant_id},(payload)=>{
         const n=payload.new||{}, o=payload.old||{};
+        if(n.poste!==poste) return;            // ce KDS ne traite que son poste
         // sonne quand une ligne entre en "à faire" (nouvel envoi ou suite lancée)
         if(n.statut==='en_attente' && o.statut!=='en_attente') beep();
         refreshKDS(poste);
