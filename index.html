@@ -17,6 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
+    --head-h:56px;
     --board:#0E1116; --board-2:#161B22; --line:#262C36;
     --paper:#F6F2E9; --ink:#1A1A1A; --ink-soft:#5A564C;
     --att:#E0A030; --prep:#3E7BFA; --pret:#22B765; --serv:#7A8290;
@@ -98,8 +99,9 @@
     color:#5A564C;padding:2px 6px;border-radius:5px}
 
   /* ---- Serveur ---- */
-  .srv{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+  .srv{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
   @media(max-width:760px){.srv{grid-template-columns:1fr}}
+  .left-col{min-width:0}
   .tablebar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
   .tb{font-family:var(--mono);font-weight:700;font-size:14px;background:var(--board-2);
     color:var(--txt-dim);border:1px solid var(--line);padding:10px 14px;border-radius:10px}
@@ -123,8 +125,8 @@
   .cat-sec .prods{padding:4px 12px 14px}
 
   /* ---- plan de salle collant (serveur) ---- */
-  .board-head{position:sticky;z-index:20;background:var(--board);
-    margin:-18px -18px 14px;padding:10px 18px 12px;border-bottom:1px solid var(--line)}
+  .board-head{position:sticky;top:var(--head-h);z-index:20;background:var(--board);
+    margin:0 0 14px;padding:10px 0 12px;border-bottom:1px solid var(--line)}
   .board-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .board-toggle{background:var(--board-2);border:1px solid var(--line);color:var(--txt);
     font-family:var(--disp);font-weight:600;font-size:14px;padding:8px 14px;border-radius:9px}
@@ -133,7 +135,7 @@
   .sum-pret{background:rgba(224,83,61,.18);color:#f08c7a}
   .sum-lancer{background:rgba(224,161,48,.18);color:var(--att)}
   .sum-cours{background:rgba(62,123,250,.16);color:#7aa5ff}
-  .board-body{margin-top:10px;max-height:42vh;overflow:auto}
+  .board-body{margin-top:10px;max-height:30vh;overflow:auto}
   .bz{margin-bottom:10px}
   .bz-h{font-family:var(--disp);font-weight:600;font-size:11px;text-transform:uppercase;
     letter-spacing:.05em;color:var(--txt-dim);margin:0 0 6px}
@@ -173,11 +175,15 @@
   .prod.out{opacity:.4;text-decoration:line-through;pointer-events:none}
   .poste-dot{width:8px;height:8px;border-radius:50%;flex:none}
   .dot-cuisine{background:var(--att)} .dot-bar{background:var(--prep)}
-  /* ticket panel */
+  /* ticket panel (desktop : pleine hauteur, scroll interne, pied collé) */
   .ticket{background:var(--board-2);border:1px solid var(--line);border-radius:16px;
-    padding:16px;position:sticky;top:80px}
+    padding:16px;position:sticky;top:var(--head-h);
+    height:calc(100dvh - var(--head-h) - 22px);display:flex;flex-direction:column}
   .ticket-bar{display:none}              /* visible seulement sur mobile */
-  .ticket-body{display:block}
+  .ticket-body{display:flex;flex-direction:column;min-height:0;flex:1}
+  .ticket-body>h3{margin:0 0 10px}
+  .tk-scroll{flex:1;overflow-y:auto;min-height:0}
+  .tk-foot{padding-top:10px}
 
   /* ---- mobile : ticket en barre + panneau dépliable ---- */
   @media(max-width:760px){
@@ -191,8 +197,8 @@
     .tb-send{background:var(--accent);color:#fff;font-family:var(--disp);font-weight:700;
       font-size:14px;padding:11px 18px;border-radius:10px;border:none}
     .tb-send:disabled{opacity:.4}
-    .ticket-body{display:none;overflow:auto;padding:0 16px 20px}
-    .ticket.open .ticket-body{display:block}
+    .ticket-body{display:none;padding:0 16px 16px}
+    .ticket.open .ticket-body{display:flex;flex-direction:column;flex:1;min-height:0}
     .ticket.open{padding-top:0}
     .carte-col{padding-bottom:84px}      /* la carte ne passe pas sous la barre */
     .ticket-body .send{display:none}     /* on garde le bouton Envoyer de la barre */
@@ -551,9 +557,11 @@ async function renderServeur(){
       <div class="prods">${btns}</div></details>`;
   });
   $('screen').innerHTML=`
-    <div class="board-head" id="board-head"></div>
     <div class="srv">
-      <div class="carte-col">${prods}</div>
+      <div class="left-col">
+        <div class="board-head" id="board-head"></div>
+        <div class="carte-col">${prods}</div>
+      </div>
       <aside class="ticket" id="ticket">
         <div class="ticket-bar" onclick="toggleTicket()">
           <span class="tb-chev" id="tk-chev">▴</span>
@@ -562,18 +570,22 @@ async function renderServeur(){
         </div>
         <div class="ticket-body" id="ticket-body">
           <h3>Commande <span id="tk-table" class="since">—</span></h3>
-          <div id="tk-sent"></div>
-          <div id="tk-lines"></div>
-          <button class="btn send" id="tk-send" disabled onclick="envoyer()">Envoyer en cuisine / bar</button>
-          <button class="ghost-btn" id="tk-close" style="width:100%;margin-top:10px;display:none" onclick="cloturer()">Clôturer la table</button>
+          <div class="tk-scroll">
+            <div id="tk-sent"></div>
+            <div id="tk-lines"></div>
+          </div>
+          <div class="tk-foot">
+            <button class="btn send" id="tk-send" disabled onclick="envoyer()">Envoyer en cuisine / bar</button>
+            <button class="ghost-btn" id="tk-close" style="width:100%;margin-top:10px;display:none" onclick="cloturer()">Clôturer la table</button>
+          </div>
         </div>
       </aside>
     </div>`;
   await loadTableStates();
   renderBoard();
-  // le plan de salle colle sous le header de l'app
+  // hauteur du header de l'app → variable CSS partagée (board sticky + ticket pleine hauteur)
   const h=document.querySelector('header')?.offsetHeight||56;
-  const bh=$('board-head'); if(bh) bh.style.top=h+'px';
+  document.documentElement.style.setProperty('--head-h', h+'px');
   drawTicket();
   // temps réel : le plan + la note sélectionnée se mettent à jour seuls
   channel=sb.channel('serveur-board')
