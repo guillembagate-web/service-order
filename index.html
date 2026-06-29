@@ -250,6 +250,13 @@
   .st-servi{background:rgba(122,130,144,.18);color:var(--txt-dim)}
   .sent-sep{font-family:var(--disp);font-weight:600;font-size:12px;text-transform:uppercase;
     letter-spacing:.05em;color:var(--txt-dim);margin:14px 0 2px}
+  .servis-box{margin-top:6px}
+  .servis-sum{font-family:var(--disp);font-weight:600;font-size:12px;color:var(--txt-dim);
+    cursor:pointer;list-style:none;padding:7px 0;border-top:1px dashed var(--line)}
+  .servis-sum::-webkit-details-marker{display:none}
+  .servis-sum::before{content:'▸ ';color:var(--txt-dim)}
+  .servis-box[open] .servis-sum::before{content:'▾ '}
+  .servis-box .sent-line{opacity:.6}
 
   /* ---- à suivre (bouton de mode + séparateur) ---- */
   .mode-btn{width:100%;margin-top:10px;padding:11px;border-radius:9px;font-family:var(--disp);
@@ -822,8 +829,9 @@ function drawTicket(){
   if(sentBox){
     if(sentLines.length){
       const stLabel={a_suivre:'à suivre',en_attente:'en attente',en_prepa:'en prépa',pret:'prêt',servi:'servi'};
-      const actifs=sentLines.filter(l=>l.statut!=='a_suivre');
+      const enCours=sentLines.filter(l=>['en_attente','en_prepa','pret'].includes(l.statut));
       const suite=sentLines.filter(l=>l.statut==='a_suivre');
+      const servis=sentLines.filter(l=>l.statut==='servi');
       const ligneHtml=l=>{
         const opts=(l.lignes_options||[]).map(o=>esc(o.option_libelle)).join(' · ');
         const serviBtn = l.statut==='pret'
@@ -835,14 +843,19 @@ function drawTicket(){
           ${serviBtn}</div>`;
       };
       let h='';
-      if(actifs.length){
-        const nPret=actifs.filter(l=>l.statut==='pret').length;
-        h+=`<div class="sent-h">En cours</div>`+actifs.map(ligneHtml).join('');
+      if(enCours.length){
+        const nPret=enCours.filter(l=>l.statut==='pret').length;
+        h+=`<div class="sent-h">En cours</div>`+enCours.map(ligneHtml).join('');
         if(nPret>1) h+=`<button class="btn-serve" onclick="servirTable()">Tout servir (${nPret})</button>`;
       }
       if(suite.length){
         h+=`<div class="sent-h hold-h">À suivre — en attente de lancement</div>`+suite.map(ligneHtml).join('');
         h+=`<button class="btn-fire" onclick="lancerSuite()">▶ Lancer la suite (${suite.length})</button>`;
+      }
+      if(servis.length){
+        // historique servi replié pour ne pas manger l'écran
+        h+=`<details class="servis-box"><summary class="servis-sum">✓ ${servis.length} servi${servis.length>1?'s':''}</summary>
+          ${servis.map(ligneHtml).join('')}</details>`;
       }
       sentBox.innerHTML=h+'<div class="sent-sep">À ajouter</div>';
     } else sentBox.innerHTML='';
